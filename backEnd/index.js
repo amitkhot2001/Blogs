@@ -8,6 +8,7 @@ const Profile = require('./Routes/getAuthorProfile');
 const Blogs = require('./Routes/Blogs');
 const fetchBlogs = require('./Routes/fetchBlogs');
 const EditBlog = require('./Routes/editBlogs');
+const publicBlogs = require('./Routes/publicBlogs');
 
 const pool = require('./DB/db');
 require('dotenv').config();
@@ -25,6 +26,7 @@ app.use('/api', Profile);
 app.use('/api', Blogs);
 app.use('/api', fetchBlogs); 
 app.use('/api', EditBlog);
+app.use('/api', publicBlogs);
 
 pool.getConnection()
   .then(() => {
