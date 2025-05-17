@@ -5,13 +5,6 @@ import Navbar from '../Components/Navbar2';
 import StatCard from '../Components/StatCard';
 import StatusBadge from '../Components/StatusBadge';
 
-const sampleBlogs = [
-  { id: 1, title: 'React Best Practices', status: 'Published', date: '2023-10-15', views: 120 },
-  { id: 2, title: 'CSS Grid Tutorial', status: 'Draft', date: '2023-10-10', views: 0 },
-  { id: 3, title: 'JavaScript ES6 Features', status: 'Pending', date: '2023-10-05', views: 0 },
-  { id: 4, title: 'Node.js Basics', status: 'Published', date: '2023-09-28', views: 85 },
-];
-
 const AuthorDashboard = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,68 +13,110 @@ const AuthorDashboard = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [loading, setLoading] = useState(true);
   const [authorName, setAuthorName] = useState('');
+  const [error, setError] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const blogsPerPage = 5;
 
   useEffect(() => {
-    // Simulate loading blogs data
-    setTimeout(() => {
-      setBlogs(sampleBlogs);
-      setLoading(false);
-    }, 1000);
-
-    // Fetch logged-in author's name
     fetchUser();
+    fetchBlogs();
   }, []);
 
-  async function fetchUser() {
+  const fetchUser = async () => {
     const token = localStorage.getItem('token');
-    if (!token) return; // no token, no fetch
+    if (!token) return setAuthorName('Author');
 
     try {
       const res = await fetch('http://localhost:5000/api/user/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch user');
+      const data = await res.json();
+      setAuthorName(data.fullName || 'Author');
+    } catch (err) {
+      console.error('Error fetching user info:', err);
+      setAuthorName('Author');
+    }
+  };
+
+  const fetchBlogs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('http://localhost:5000/api/fetch-blogs', {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
       });
 
-      if (!res.ok) {
-        throw new Error('Failed to fetch user info');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch blogs:', errorText);
+        setError('Failed to load blogs');
+        setLoading(false);
+        return;
       }
 
-      const data = await res.json();
-      setAuthorName(data.fullName);
-    } catch (err) {
-      console.error('Error fetching user info:', err);
+      const data = await response.json();
+      
+
+      if (data.blogs && data.blogs.length > 0) {
+        const mappedBlogs = data.blogs.map((blog) => ({
+          id: blog.id,
+          title: blog.title,
+          status: blog.is_draft === 1 ? 'Pending' : 'Published',
+          date: blog.created_at,
+          views: blog.views || 0,
+        }));
+        setBlogs(mappedBlogs);
+        setError('');
+      } else {
+        setBlogs([]);
+        setError('No blogs found.');
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      setError('Error fetching blogs');
+      setLoading(false);
     }
-  }
-
-  const handleCreateBlog = () => {
-    navigate('/create-blog');
   };
 
-  const handleEditBlog = (id) => {
-    navigate(`/edit-blog/${id}`);
-  };
-
+  const handleCreateBlog = () => navigate('/create-blog');
+  const handleEditBlog = (id) => navigate(`/edit-blog/${id}`);
   const handleLogout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userData');
     navigate('/login');
   };
 
-  const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev);
-  };
+  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
 
+  // Filter blogs by search and status
   const filteredBlogs = blogs.filter((blog) => {
-    const matchesSearch = blog.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = blog.title?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || blog.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
+  // Pagination calculations
+  const indexOfLastBlog = currentPage * blogsPerPage;
+  const indexOfFirstBlog = indexOfLastBlog - blogsPerPage;
+  const currentBlogs = filteredBlogs.slice(indexOfFirstBlog, indexOfLastBlog);
+  const totalPages = Math.ceil(filteredBlogs.length / blogsPerPage);
+
+  const paginate = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
+
   const stats = {
     total: blogs.length,
     published: blogs.filter((b) => b.status === 'Published').length,
-    drafts: blogs.filter((b) => b.status === 'Draft').length,
+    drafts: 0, // drafts removed in favor of pending
     pending: blogs.filter((b) => b.status === 'Pending').length,
   };
 
@@ -89,12 +124,11 @@ const AuthorDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
       <Navbar isMenuOpen={isMenuOpen} toggleMenu={toggleMenu} handleLogout={handleLogout} />
 
-      {/* Main content */}
       <div className="py-6 px-4 sm:px-6 lg:px-8 flex justify-center">
         <div className="w-full max-w-6xl bg-white shadow-2xl rounded-3xl p-4 sm:p-8 my-6">
           <div className="mb-6 text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
-              Welcome, {authorName ? authorName : 'Author'}!
+              Welcome, {authorName}!
             </h1>
             <p className="text-gray-600 text-base sm:text-lg">
               Manage your blog posts, create new content, and track your progress.
@@ -104,8 +138,8 @@ const AuthorDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
             <StatCard icon={<FileText className="w-6 h-6 text-blue-600" />} label="Total Blogs" count={stats.total} color="blue" />
             <StatCard icon={<Eye className="w-6 h-6 text-green-600" />} label="Published" count={stats.published} color="green" />
-            <StatCard icon={<Clock className="w-6 h-6 text-yellow-600" />} label="Drafts" count={stats.drafts} color="yellow" />
-            <StatCard icon={<Pencil className="w-6 h-6 text-red-600" />} label="Pending" count={stats.pending} color="red" />
+            <StatCard icon={<Clock className="w-6 h-6 text-yellow-600" />} label="Pending" count={stats.pending} color="yellow" />
+            <StatCard icon={<Pencil className="w-6 h-6 text-red-600" />} label="Drafts" count={stats.drafts} color="red" />
           </div>
 
           <div className="text-center mb-8">
@@ -119,6 +153,7 @@ const AuthorDashboard = () => {
 
           <div className="mb-6">
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">Your Blogs</h2>
+
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -126,69 +161,112 @@ const AuthorDashboard = () => {
                   type="text"
                   placeholder="Search blogs..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // reset to page 1 on search
+                  }}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setCurrentPage(1); // reset to page 1 on filter change
+                }}
                 className="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="All">All Status</option>
                 <option value="Published">Published</option>
-                <option value="Draft">Draft</option>
                 <option value="Pending">Pending</option>
               </select>
             </div>
 
             {loading ? (
-              <div className="text-center py-6">
-                <p className="text-gray-600">Loading blogs...</p>
-              </div>
-            ) : filteredBlogs.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="py-3 px-6 border-b border-gray-200">Title</th>
-                      <th className="py-3 px-6 border-b border-gray-200">Status</th>
-                      <th className="py-3 px-6 border-b border-gray-200">Date</th>
-                      <th className="py-3 px-6 border-b border-gray-200">Views</th>
-                      <th className="py-3 px-6 border-b border-gray-200">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBlogs.map(({ id, title, status, date, views }) => (
-                      <tr
-                        key={id}
-                        className="hover:bg-blue-50 transition-colors cursor-pointer"
-                        onClick={() => handleEditBlog(id)}
-                      >
-                        <td className="py-4 px-6 border-b border-gray-200">{title}</td>
-                        <td className="py-4 px-6 border-b border-gray-200">
-                          <StatusBadge status={status} />
-                        </td>
-                        <td className="py-4 px-6 border-b border-gray-200">{date}</td>
-                        <td className="py-4 px-6 border-b border-gray-200">{views}</td>
-                        <td className="py-4 px-6 border-b border-gray-200">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditBlog(id);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 font-semibold"
-                          >
-                            Edit
-                          </button>
-                        </td>
+              <div className="text-center py-6 text-gray-600">Loading blogs...</div>
+            ) : error ? (
+              <div className="text-center py-6 text-red-600">{error}</div>
+            ) : currentBlogs.length > 0 ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="py-3 px-6 border-b border-gray-200">Title</th>
+                        <th className="py-3 px-6 border-b border-gray-200">Status</th>
+                        <th className="py-3 px-6 border-b border-gray-200">Date</th>
+                        <th className="py-3 px-6 border-b border-gray-200">Views</th>
+                        <th className="py-3 px-6 border-b border-gray-200">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {currentBlogs.map(({ id, title, status, date, views }) => (
+                        <tr
+                          key={id}
+                          className="hover:bg-blue-50 transition-colors cursor-pointer"
+                          onClick={() => handleEditBlog(id)}
+                        >
+                          <td className="py-4 px-6 border-b border-gray-200">{title}</td>
+                          <td className="py-4 px-6 border-b border-gray-200">
+                            <StatusBadge status={status} />
+                          </td>
+                          <td className="py-4 px-6 border-b border-gray-200">
+                            {new Date(date).toLocaleDateString()}
+                          </td>
+                          <td className="py-4 px-6 border-b border-gray-200">{views}</td>
+                          <td className="py-4 px-6 border-b border-gray-200 text-blue-600 hover:text-blue-800">
+                            <Pencil className="inline-block w-5 h-5" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination controls */}
+                <div className="flex justify-center items-center gap-3 mt-6">
+                  <button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded-md border ${
+                      currentPage === 1 ? 'text-gray-400 border-gray-300 cursor-not-allowed' : 'text-blue-600 border-blue-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    Prev
+                  </button>
+
+                  {[...Array(totalPages)].map((_, i) => {
+                    const page = i + 1;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => paginate(page)}
+                        className={`px-3 py-1 rounded-md border ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'text-blue-600 border-blue-600 hover:bg-blue-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`px-3 py-1 rounded-md border ${
+                      currentPage === totalPages
+                        ? 'text-gray-400 border-gray-300 cursor-not-allowed'
+                        : 'text-blue-600 border-blue-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
             ) : (
-              <div className="text-center py-6 text-gray-600">No blogs found.</div>
+              <div className="text-center py-6 text-gray-600">No blogs match your criteria.</div>
             )}
           </div>
         </div>
