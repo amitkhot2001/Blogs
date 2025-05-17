@@ -4,6 +4,9 @@ import { Pencil, FileText, Clock, Eye, Search } from 'lucide-react';
 import Navbar from '../Components/Navbar2';
 import StatCard from '../Components/StatCard';
 import StatusBadge from '../Components/StatusBadge';
+import Hashids from 'hashids';
+
+const hashids = new Hashids('qA0z4AGE9R', 10); // Replace 'your-secret-salt' with your own secret
 
 const AuthorDashboard = () => {
   const navigate = useNavigate();
@@ -62,7 +65,6 @@ const AuthorDashboard = () => {
       }
 
       const data = await response.json();
-      
 
       if (data.blogs && data.blogs.length > 0) {
         const mappedBlogs = data.blogs.map((blog) => ({
@@ -87,7 +89,13 @@ const AuthorDashboard = () => {
   };
 
   const handleCreateBlog = () => navigate('/create-blog');
-  const handleEditBlog = (id) => navigate(`/edit-blog/${id}`);
+
+  // Encode blog ID with hashids before navigation
+  const handleEditBlog = (id) => {
+    const encodedId = hashids.encode(id);
+    navigate(`/edit-blog/${encodedId}`);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -206,16 +214,19 @@ const AuthorDashboard = () => {
                           className="hover:bg-blue-50 transition-colors cursor-pointer"
                           onClick={() => handleEditBlog(id)}
                         >
-                          <td className="py-4 px-6 border-b border-gray-200">{title}</td>
-                          <td className="py-4 px-6 border-b border-gray-200">
+                          <td className="py-3 px-6 border-b border-gray-200 font-semibold text-gray-900">
+                            {title}
+                          </td>
+                          <td className="py-3 px-6 border-b border-gray-200">
                             <StatusBadge status={status} />
                           </td>
-                          <td className="py-4 px-6 border-b border-gray-200">
+                          <td className="py-3 px-6 border-b border-gray-200 text-gray-600">
                             {new Date(date).toLocaleDateString()}
                           </td>
-                          <td className="py-4 px-6 border-b border-gray-200">{views}</td>
-                          <td className="py-4 px-6 border-b border-gray-200 text-blue-600 hover:text-blue-800">
-                            <Pencil className="inline-block w-5 h-5" />
+                          <td className="py-3 px-6 border-b border-gray-200 text-gray-600">{views}</td>
+                          <td className="py-3 px-6 border-b border-gray-200 text-blue-600 font-semibold flex items-center space-x-2">
+                            <Pencil className="w-5 h-5" />
+                            <span>Edit</span>
                           </td>
                         </tr>
                       ))}
@@ -223,50 +234,38 @@ const AuthorDashboard = () => {
                   </table>
                 </div>
 
-                {/* Pagination controls */}
-                <div className="flex justify-center items-center gap-3 mt-6">
+                <div className="flex justify-center space-x-3 mt-6">
                   <button
                     onClick={() => paginate(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md border ${
-                      currentPage === 1 ? 'text-gray-400 border-gray-300 cursor-not-allowed' : 'text-blue-600 border-blue-600 hover:bg-blue-100'
-                    }`}
+                    className="px-3 py-1 rounded bg-gray-300 disabled:opacity-50"
                   >
                     Prev
                   </button>
-
-                  {[...Array(totalPages)].map((_, i) => {
-                    const page = i + 1;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => paginate(page)}
-                        className={`px-3 py-1 rounded-md border ${
-                          currentPage === page
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'text-blue-600 border-blue-600 hover:bg-blue-100'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
-
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => paginate(i + 1)}
+                      className={`px-3 py-1 rounded ${
+                        currentPage === i + 1
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 hover:bg-blue-300'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
                   <button
                     onClick={() => paginate(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md border ${
-                      currentPage === totalPages
-                        ? 'text-gray-400 border-gray-300 cursor-not-allowed'
-                        : 'text-blue-600 border-blue-600 hover:bg-blue-100'
-                    }`}
+                    className="px-3 py-1 rounded bg-gray-300 disabled:opacity-50"
                   >
                     Next
                   </button>
                 </div>
               </>
             ) : (
-              <div className="text-center py-6 text-gray-600">No blogs match your criteria.</div>
+              <div className="text-center py-6 text-gray-600">No blogs found.</div>
             )}
           </div>
         </div>

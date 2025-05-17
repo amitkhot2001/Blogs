@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 const EditBlog = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // encoded blog ID from URL
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -13,6 +13,7 @@ const EditBlog = () => {
     const fetchBlog = async () => {
       try {
         const token = localStorage.getItem('token');
+
         const response = await fetch(`http://localhost:5000/api/blogs/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -20,14 +21,19 @@ const EditBlog = () => {
           },
         });
 
+        if (response.status === 403) {
+          throw new Error('Access denied: You are not the owner of this blog.');
+        }
+
         if (!response.ok) {
           throw new Error('Failed to fetch blog details');
         }
 
         const data = await response.json();
-        setBlog(data.blog || data); // adjust depending on your API response shape
-        setTitle(data.blog?.title || data.title || '');
-        setContent(data.blog?.content || data.content || '');
+
+        setBlog(data); // assuming data contains the blog object with numeric id
+        setTitle(data.title || '');
+        setContent(data.content || '');
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -39,7 +45,6 @@ const EditBlog = () => {
   }, [id]);
 
   const handleSave = () => {
-    // Implement save functionality here
     alert('Save functionality not implemented yet.');
   };
 
@@ -49,7 +54,9 @@ const EditBlog = () => {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h2 className="text-2xl font-bold mb-4">Edit Blog #{id}</h2>
+      <h2 className="text-2xl font-bold mb-4">
+        Editing Blog #{blog.id} – {blog.title || 'Untitled Blog'}
+      </h2>
 
       <div className="mb-4">
         <label className="block mb-1 font-semibold" htmlFor="title">
