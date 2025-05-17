@@ -11,6 +11,8 @@ function authenticateToken(req, res, next) {
       console.error('JWT verification failed:', err.message);
       return res.status(403).json({ error: 'Invalid token.' });
     }
+
+
     req.user = { userId: decoded.userId }; // Attach userId
     next();
   });
