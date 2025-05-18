@@ -5,6 +5,7 @@ import Navbar from '../Components/Navbar2';
 import StatCard from '../Components/StatCard';
 import StatusBadge from '../Components/StatusBadge';
 import Hashids from 'hashids';
+import Publicblogs from '../Pages/Public';
 
 const hashids = new Hashids('qA0z4AGE9R', 10); // Replace 'your-secret-salt' with your own secret
 
