@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion'; // For subtle animations
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import Hashids from 'hashids';
 import Navbar from '../Components/Navbar';
+
+const hashids = new Hashids("your-secret-salt", 8); // Use the same salt as in Public.jsx
 
 const BlogDetail = () => {
   const { id } = useParams();
@@ -12,6 +15,9 @@ const BlogDetail = () => {
   const searchParams = new URLSearchParams(location.search);
   const page = searchParams.get('page') || '1';
 
+  // Decode the hashed ID
+  const decodedId = hashids.decode(id)[0]; // Get the first number from decoded array
+
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +27,11 @@ const BlogDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://localhost:5000/api/blog/${id}`);
+        if (!decodedId) {
+          throw new Error('Invalid blog ID');
+        }
+
+        const response = await fetch(`http://localhost:5000/api/blog/${decodedId}`);
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
@@ -32,7 +42,7 @@ const BlogDetail = () => {
           setBlog(data);
         }
       } catch (err) {
-        setError('Failed to load blog. Please try again later.');
+        setError(err.message || 'Failed to load blog. Please try again later.');
         setBlog(null);
       } finally {
         setLoading(false);
@@ -40,13 +50,13 @@ const BlogDetail = () => {
     };
 
     fetchBlog();
-  }, [id]);
+  }, [decodedId]);
 
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1); // go back if possible
     } else {
-      navigate(`/blogs?page=${page}`); // fallback to blogs list on same page
+      navigate(`/?page=${page}`); // fallback to blogs list on same page
     }
   };
 

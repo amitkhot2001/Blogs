@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../Components/Navbar';
+import Hashids from 'hashids'; // First install: npm install hashids
 
 const blogsPerPage = 6;
+const hashids = new Hashids("your-secret-salt", 8); // minimum length of 8
 
 const Public = () => {
   const [blogs, setBlogs] = useState([]);
@@ -11,6 +13,11 @@ const Public = () => {
   const [totalBlogs, setTotalBlogs] = useState(0);
 
   const totalPages = Math.ceil(totalBlogs / blogsPerPage);
+
+  // Function to hash blog ID
+  const hashBlogId = (id) => {
+    return hashids.encode(id);
+  };
 
   useEffect(() => {
     const fetchBlogs = async () => {
@@ -93,7 +100,7 @@ const Public = () => {
                 >
                   <div className="p-6 flex flex-col h-full">
                     <Link
-                      to={`/blog/${post.id}`}
+                      to={`/blog/${hashBlogId(post.id)}`}
                       className="text-xl font-semibold text-gray-800 dark:text-white mb-4 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 line-clamp-2"
                     >
                       {post.title}
@@ -106,7 +113,7 @@ const Public = () => {
                       <span>{new Date(post.date).toLocaleDateString()}</span>
                     </div>
                     <Link
-                      to={`/blog/${post.id}`}
+                      to={`/blog/${hashBlogId(post.id)}`}
                       className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200 flex items-center gap-1"
                     >
                       Read the post
