@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../Components/Navbar';
 
 const blogsPerPage = 6;
@@ -9,7 +10,6 @@ const Public = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalBlogs, setTotalBlogs] = useState(0);
 
-  // Calculate total pages dynamically based on totalBlogs
   const totalPages = Math.ceil(totalBlogs / blogsPerPage);
 
   useEffect(() => {
@@ -56,7 +56,6 @@ const Public = () => {
     }
   };
 
-  // Skeleton Loader Component for Loading State
   const SkeletonCard = () => (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden animate-pulse">
       <div className="p-6 flex flex-col h-full">
@@ -93,26 +92,26 @@ const Public = () => {
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-transform duration-300 hover:-translate-y-2 hover:shadow-xl"
                 >
                   <div className="p-6 flex flex-col h-full">
-                    <a
-                      href="#"
+                    <Link
+                      to={`/blog/${post.id}`}
                       className="text-xl font-semibold text-gray-800 dark:text-white mb-4 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 line-clamp-2"
                     >
                       {post.title}
-                    </a>
+                    </Link>
                     <p className="text-gray-600 dark:text-gray-300 text-base leading-relaxed flex-grow mb-4 line-clamp-4">
                       {post.description}
                     </p>
                     <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      <span>By {post.author || 'Unknown'}</span>
+                      <span>Author: {post.author || 'Unknown'}</span>
                       <span>{new Date(post.date).toLocaleDateString()}</span>
                     </div>
-                    <a
-                      href="#"
+                    <Link
+                      to={`/blog/${post.id}`}
                       className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200 flex items-center gap-1"
                     >
                       Read the post
                       <span className="text-blue-600 dark:text-blue-400">›</span>
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -159,7 +158,6 @@ const Public = () => {
               </button>
             </div>
 
-            {/* Display total blogs for debugging */}
             <p className="text-center text-gray-600 dark:text-gray-400 mt-6 text-sm">
               Total Blogs: {totalBlogs}
             </p>
